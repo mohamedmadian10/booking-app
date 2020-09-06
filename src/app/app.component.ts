@@ -1,8 +1,10 @@
 import { Component } from '@angular/core';
 
 import { Platform } from '@ionic/angular';
-import { SplashScreen } from '@ionic-native/splash-screen/ngx';
-import { StatusBar } from '@ionic-native/status-bar/ngx';
+import {Plugins, Capacitor} from '@capacitor/core'
+import { AuthService } from './_services/auth.service';
+import { Router } from '@angular/router';
+import { from } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -12,16 +14,22 @@ import { StatusBar } from '@ionic-native/status-bar/ngx';
 export class AppComponent {
   constructor(
     private platform: Platform,
-    private splashScreen: SplashScreen,
-    private statusBar: StatusBar
+
+    private authService:AuthService,
+    private router:Router
   ) {
     this.initializeApp();
   }
 
   initializeApp() {
     this.platform.ready().then(() => {
-      this.statusBar.styleDefault();
-      this.splashScreen.hide();
+     if(Capacitor.isPluginAvailable('SplahScreen')){
+       Plugins.SplashScreen.hide();
+     }
     });
+  }
+  onLogout(){
+    this.authService.logout();
+    this.router.navigate(['/auth'])
   }
 }

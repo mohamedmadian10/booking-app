@@ -1,0 +1,39 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref='/places/tabs/offers'></ion-back-button>
+    </ion-buttons>
+    <ion-title>edit-offer</ion-title>
+    <ion-buttons slot="primary">
+      <ion-button [disabled]="!editOfferForm?.valid" (click)="onEditOffer()">
+        <ion-icon slot="icon-only" name="checkmark"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="ion-text-center" *ngIf="isLoading">
+    <ion-spinner></ion-spinner>
+  </div>
+  <form [formGroup]="editOfferForm" *ngIf="!isLoading">
+    <ion-grid>
+      <ion-row>
+        <ion-col size-sm="6" offset-sm='3'>
+          <ion-item>
+            <ion-label position="floating">Title</ion-label>
+            <ion-input type="text" formControlName="title"></ion-input>
+          </ion-item>
+        </ion-col>
+      </ion-row>
+      <ion-row>
+        <ion-col size-sm="6" offset-sm='3'>
+          <ion-item>
+            <ion-label position="floating">Description</ion-label>
+            <ion-input type="text" formControlName="description"></ion-input>
+          </ion-item>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </form>
+</ion-content>
