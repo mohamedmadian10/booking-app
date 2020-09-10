@@ -1,5 +1,5 @@
 {
-  "appId": "io.ionic.starter",
+  "appId": "com.madian.ionicbooking",
   "appName": "booking",
   "bundledWebRuntime": false,
   "npmClient": "npm",
