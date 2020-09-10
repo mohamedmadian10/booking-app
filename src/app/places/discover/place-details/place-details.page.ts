@@ -12,7 +12,8 @@ import { PlacesService } from "src/app/_services/places.service";
 import { BookingCreateComponent } from "../../../bookings/booking-create/booking-create.component";
 import { Subscription } from "rxjs";
 import { BookingService } from "src/app/_services/booking.service";
-import { AuthService } from 'src/app/_services/auth.service';
+import { AuthService } from "src/app/_services/auth.service";
+import { switchMap, take } from "rxjs/operators";
 
 @Component({
   selector: "app-place-details",
@@ -28,12 +29,12 @@ export class PlaceDetailsPage implements OnInit, OnDestroy {
     private modalCtl: ModalController,
     private actionSheetCtrl: ActionSheetController,
     private bookSer: BookingService,
-    private loadingCtrl:LoadingController,
-    private authService:AuthService,
-    private alertCtrl:AlertController
+    private loadingCtrl: LoadingController,
+    private authService: AuthService,
+    private alertCtrl: AlertController
   ) {}
   place: Place;
-  isBookable =false;
+  isBookable = false;
   isLoading = false;
   private plaseDetailaSub: Subscription;
   ngOnInit() {
@@ -44,23 +45,43 @@ export class PlaceDetailsPage implements OnInit, OnDestroy {
         return;
       }
       this.isLoading = true;
-      this.plaseDetailaSub = this.placesSer
-        .getPlaceDetails(param.get("placeId"))
-        .subscribe((place) => {
-          this.place = place;
-          this.isBookable =  place.userId !==this.authService.userId ;
-          this.isLoading = false;
-        },error=>{
-          this.alertCtrl.create({
-            header:'An error occured',
-            message:'could not fech place,please try again later',
-            buttons:[{text:'okay',handler:()=>{
-              this.router.navigate(['/places/tabs/discover'])
-            }}]
-          }).then(alertEl=>{
-            alertEl.present();
+      let fetchedUserId: string;
+      this.authService.userId
+        .pipe(
+          take(1),
+          switchMap((userId) => {
+            if (!userId) {
+              throw new Error("no user id found!");
+            }
+            fetchedUserId = userId;
+            return this.placesSer.getPlaceDetails(param.get("placeId"));
           })
-        });
+        )
+        .subscribe(
+          (place) => {
+            this.place = place;
+            this.isBookable = place.userId !== fetchedUserId;
+            this.isLoading = false;
+          },
+          (error) => {
+            this.alertCtrl
+              .create({
+                header: "An error occured",
+                message: "could not fech place,please try again later",
+                buttons: [
+                  {
+                    text: "okay",
+                    handler: () => {
+                      this.router.navigate(["/places/tabs/discover"]);
+                    },
+                  },
+                ],
+              })
+              .then((alertEl) => {
+                alertEl.present();
+              });
+          }
+        );
     });
     // this.place = this.placesSer.places.find((p) => p.id === id);
     // console.log(this.place);
@@ -110,25 +131,28 @@ export class PlaceDetailsPage implements OnInit, OnDestroy {
         console.log(result.data, result.role);
         if (result.role === "confirm") {
           console.log("booked");
-          this.loadingCtrl.create({
-            message:'booking created'
-          }).then(loadingEl=>{
-            loadingEl.present();
-            this.bookSer.addBooking(
-              this.place.id,
-              this.place.title,
-              this.place.imageUrl,
-              result.data.bookingData.firstName,
-              result.data.bookingData.lastName,
-              result.data.bookingData.guestNumbers,
-              result.data.bookingData.startDate,
-              result.data.bookingData.endDate
-            ).subscribe(()=>{
-              loadingEl.dismiss();
-              this.router.navigate(['/bookings'])
+          this.loadingCtrl
+            .create({
+              message: "booking created",
+            })
+            .then((loadingEl) => {
+              loadingEl.present();
+              this.bookSer
+                .addBooking(
+                  this.place.id,
+                  this.place.title,
+                  this.place.imageUrl,
+                  result.data.bookingData.firstName,
+                  result.data.bookingData.lastName,
+                  result.data.bookingData.guestNumbers,
+                  result.data.bookingData.startDate,
+                  result.data.bookingData.endDate
+                )
+                .subscribe(() => {
+                  loadingEl.dismiss();
+                  this.router.navigate(["/bookings"]);
+                });
             });
-          })
-          
         }
       });
   }

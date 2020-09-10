@@ -51,8 +51,8 @@ export class ImagePickerComponent implements OnInit {
       source: CameraSource.Prompt,
       quality: 50,
       correctOrientation: true,
-      width: 200,
-      height:320,
+      width: 320,
+      height:200,
       allowEditing: true,
       resultType: CameraResultType.Base64,
     })

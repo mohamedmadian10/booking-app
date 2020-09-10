@@ -29,40 +29,51 @@ export class BookingService {
   }
 
   fechBookings() {
-    return this.http
-      .get<{ [key: string]: BookingData }>(
-        `https://ionic-booking-8190d.firebaseio.com/bookings.json?orderBy="userId"&equalTo="${this.authService.userId}"`
-      )
-      .pipe(
-        map((resData) => {
-          const bookings = [];
-          for (const key in resData) {
-            if (resData.hasOwnProperty(key)) {
-              bookings.push(
-                new Booking(
-                  key,
-                  resData[key].placeId,
-                  resData[key].userId,
-                  resData[key].placeTitle,
-                  resData[key].placeImage,
-                  resData[key].guestNumber,
-                  resData[key].firstName,
-                  resData[key].lastName,
-                  new Date(resData[key].bookedFrom),
-                  new Date(resData[key].bookedTo)
-                )
-              );
-            }
+    let fetchedUserId;
+    return this.authService.userId.pipe(
+      take(1),
+      switchMap((userId) => {
+        if (!userId) {
+          throw new Error("no user id found!");
+        }
+        fetchedUserId = userId;
+        return this.authService.token;
+      }),
+      take(1),
+      switchMap((token) => {
+        return this.http.get<{ [key: string]: BookingData }>(
+          `https://ionic-booking-8190d.firebaseio.com/bookings.json?orderBy="userId"&equalTo="${fetchedUserId}" &&auth=${token}`
+        );
+      }),
+      map((resData) => {
+        const bookings = [];
+        for (const key in resData) {
+          if (resData.hasOwnProperty(key)) {
+            bookings.push(
+              new Booking(
+                key,
+                resData[key].placeId,
+                resData[key].userId,
+                resData[key].placeTitle,
+                resData[key].placeImage,
+                resData[key].guestNumber,
+                resData[key].firstName,
+                resData[key].lastName,
+                new Date(resData[key].bookedFrom),
+                new Date(resData[key].bookedTo)
+              )
+            );
           }
-          return bookings;
-        }),
-        tap((bookings) => {
-          this._bookings.next(bookings);
-        })
-        // tap((res) => {
-        //   console.log(res);
-        // })
-      );
+        }
+        return bookings;
+      }),
+      tap((bookings) => {
+        this._bookings.next(bookings);
+      })
+      // tap((res) => {
+      //   console.log(res);
+      // })
+    );
   }
 
   //add booking()
@@ -77,68 +88,73 @@ export class BookingService {
     dateTo: Date
   ) {
     let generatedId: string;
-    const newBooking = new Booking(
-      Math.random().toString(),
-      placeId,
-      this.authService.userId,
-      placeTitle,
-      placeImage,
-      guestNumbers,
-      firstName,
-      lastName,
-      dateFrom,
-      dateTo
-    );
-    return this.http
-      .post<{ name: string }>(
-        `https://ionic-booking-8190d.firebaseio.com/bookings.json`,
-        {
-          ...newBooking,
-          id: null,
+    let newBooking: Booking;
+    let fetchedUserId;
+    return this.authService.userId.pipe(
+      take(1),
+      switchMap((userId) => {
+        if (!userId) {
+          throw new Error("no userId found.");
         }
-      )
-      .pipe(
-        //   tap(resData=>{
-        //   console.log(resData);
-        // })
-        switchMap((resData) => {
-          generatedId = resData.name;
-          return this.bookings;
-        }),
-        take(1),
-        tap((bookings) => {
-          newBooking.id = generatedId;
-          this._bookings.next(bookings.concat(newBooking));
-        })
-      );
-    // return this.bookings.pipe(
-    //   take(1),
-    //   delay(1000),
-    //   tap((bookings) => {
-    //     this._bookings.next(bookings.concat(newBooking));
-    //   })
-    // );
+        fetchedUserId = userId;
+        return this.authService.token;
+      }),
+      take(1),
+      switchMap((token) => {
+        newBooking = new Booking(
+          Math.random().toString(),
+          placeId,
+          fetchedUserId,
+          placeTitle,
+          placeImage,
+          guestNumbers,
+          firstName,
+          lastName,
+          dateFrom,
+          dateTo
+        );
+        return this.http.post<{ name: string }>(
+          `https://ionic-booking-8190d.firebaseio.com/bookings.json?auth=${token}`,
+          {
+            ...newBooking,
+            id: null,
+          }
+        );
+      }),
+      take(1),
+      switchMap((resData) => {
+        generatedId = resData.name;
+        return this.bookings;
+      }),
+      take(1),
+      tap((bookings) => {
+        newBooking.id = generatedId;
+        this._bookings.next(bookings.concat(newBooking));
+      })
+    );
   }
 
   //canceling booking
   cancelBooking(bookingId: string) {
-    return this.http
-      .delete(
-        `https://ionic-booking-8190d.firebaseio.com/bookings/${bookingId}.json`
-      )
-      .pipe(
-        switchMap(() => {
-          return this.bookings;
-        }),
-        take(1),
-        tap((bookings) => {
-          this._bookings.next(
-            bookings.filter((b) => {
-              b.id !== bookingId;
-            })
-          );
-        })
-      );
+    return this.authService.token.pipe(
+      take(1),
+      switchMap((token) => {
+        return this.http.delete(
+          `https://ionic-booking-8190d.firebaseio.com/bookings/${bookingId}.json?auth=${token}`
+        );
+      }),      
+      switchMap(() => {
+        return this.bookings;
+      }),
+      take(1),
+      tap((bookings) => {
+        this._bookings.next(
+          bookings.filter((b) => {
+            b.id !== bookingId;
+          })
+        );
+      })
+    );
     // return this.bookings.pipe(
     //   take(1),
     //   delay(1000),
